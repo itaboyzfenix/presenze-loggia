@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presenze Loggia</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .presenze-list {
+            margin-top: 30px;
+        }
+        .presenza-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .presenza-info {
+            flex: 1;
+        }
+        .presenza-nome {
+            font-weight: 600;
+            color: #333;
+            font-size: 18px;
+        }
+        .presenza-data {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .btn-elimina {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-elimina:hover {
+            background: #c0392b;
+        }
+        .stats {
+            background: #667eea;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .stats h2 {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Gestione Presenze Loggia</h1>
+        
+        <div class="stats">
+            <h2>Presenze Totali: <span id="totale">0</span></h2>
+        </div>
+
+        <div class="input-group">
+            <label for="nome">Nome Fratello</label>
+            <input type="text" id="nome" placeholder="Inserisci nome">
+        </div>
+
+        <div class="input-group">
+            <label for="data">Data Riunione</label>
+            <input type="date" id="data">
+        </div>
+
+        <div class="input-group">
+            <label for="tipo">Tipo Presenza</label>
+            <select id="tipo">
+                <option value="Presente">Presente</option>
+                <option value="Giustificato">Giustificato</option>
+                <option value="Assente">Assente</option>
+            </select>
+        </div>
+
+        <button onclick="aggiungiPresenza()">Aggiungi Presenza</button>
+
+        <div class="presenze-list" id="presenzeList"></div>
+    </div>
+
+    <script>
+        let presenze = JSON.parse(localStorage.getItem('presenze')) || [];
+
+        function aggiornaLista() {
+            const lista = document.getElementById('presenzeList');
+            lista.innerHTML = '';
+            
+            presenze.forEach((presenza, index) => {
+                const item = document.createElement('div');
+                item.className = 'presenza-item';
+                item.innerHTML = `
+                    <div class="presenza-info">
+                        <div class="presenza-nome">${presenza.nome} - ${presenza.tipo}</div>
+                        <div class="presenza-data">${presenza.data}</div>
+                    </div>
+                    <button class="btn-elimina" onclick="eliminaPresenza(${index})">Elimina</button>
+                `;
+                lista.appendChild(item);
+            });
+
+            document.getElementById('totale').textContent = presenze.length;
+        }
+
+        function aggiungiPresenza() {
+            const nome = document.getElementById('nome').value;
+            const data = document.getElementById('data').value;
+            const tipo = document.getElementById('tipo').value;
+
+            if (!nome || !data) {
+                alert('Compila tutti i campi!');
+                return;
+            }
+
+            presenze.push({ nome, data, tipo });
+            localStorage.setItem('presenze', JSON.stringify(presenze));
+            
+            document.getElementById('nome').value = '';
+            document.getElementById('data').value = '';
+            
+            aggiornaLista();
+        }
+
+        function eliminaPresenza(index) {
+            if (confirm('Sei sicuro di voler eliminare questa presenza?')) {
+                presenze.splice(index, 1);
+                localStorage.setItem('presenze', JSON.stringify(presenze));
+                aggiornaLista();
+            }
+        }
+
+        document.getElementById('data').valueAsDate = new Date();
+        aggiornaLista();
+    </script>
+</body>
+</html>
