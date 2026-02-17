@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presenze Loggia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .logo-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .member-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .member-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .member-card.justified {
+            background-color: #fef3c7;
+            border-left-color: #f59e0b;
+        }
+
+        .member-card.always-justified {
+            background-color: #dbeafe;
+            border-left-color: #3b82f6;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #f59e0b;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            animation: slideIn 0.3s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .stats-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .badge-justified {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-present {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-total {
+            background-color: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .share-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 40;
+        }
+
+        .share-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .copy-success {
+            animation: copySuccess 0.5s ease;
+        }
+
+        @keyframes copySuccess {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); background-color: #10b981; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const INITIAL_MEMBERS = [
+            "Agus Stefano Giuseppe",
+            "Ambu Pierpaolo",
+            "Balia",
+            "Concu Mauro",
+            "Cordano Paolo",
+            "Deiana",
+            "Gaviano Roberto",
+            "Gravino Giampaolo",
+            "Longobardi Gennaro",
+            "Mancini Angelo",
+            "Manunza",
+            "Massidda",
+            "Milonopoulos Konstantinos",
+            "Mossa Jacopo",
+            "Mossena Efisio",
+            "Nicolò",
+            "Nugnes Giovanni",
+            "Pani Michele",
+            "Piras Gabriele",
+            "Podda Marco Luigi",
+            "Pusceddu",
+            "Rundeddu Francesco",
+            "Simonelis",
+            "Solla Antonio",
+            "Tilocca",
+            "Trudu",
+            "Tuveri Riccardo",
+            "Zuddas Bruno"
+        ].sort();
+
+        function getNextFriday() {
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7;
+            const nextFriday = new Date(today);
+            nextFriday.setDate(today.getDate() + daysUntilFriday);
+            return nextFriday.toISOString().split('T')[0];
+        }
+
+        function compressData(data) {
+            const json = JSON.stringify(data);
+            return btoa(encodeURIComponent(json));
+        }
+
+        function decompressData(compressed) {
+            try {
+                const json = decodeURIComponent(atob(compressed));
+                return JSON.parse(json);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function App() {
+            const [date, setDate] = useState(getNextFriday());
+            const [members, setMembers] = useState(INITIAL_MEMBERS);
+            const [justified, setJustified] = useState({});
+            const [alwaysJustified, setAlwaysJustified] = useState({});
+            const [showAddModal, setShowAddModal] = useState(false);
+            const [showShareModal, setShowShareModal] = useState(false);
+            const [newMemberName, setNewMemberName] = useState('');
+            const [searchTerm, setSearchTerm] = useState('');
+            const [shareLink, setShareLink] = useState('');
+            const [copySuccess, setCopySuccess] = useState(false);
+            const [loggiaName, setLoggiaName] = useState('');
+            const [showNameModal, setShowNameModal] = useState(false);
+
+            // Load data from URL or localStorage on mount
+            useEffect(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const dataParam = urlParams.get('data');
+
+                if (dataParam) {
+                    // Load from URL
+                    const data = decompressData(dataParam);
+                    if (data) {
+                        if (data.date) setDate(data.date);
+                        if (data.members) setMembers(data.members);
+                        if (data.justified) setJustified(data.justified);
+                        if (data.alwaysJustified) setAlwaysJustified(data.alwaysJustified);
+                        if (data.loggiaName) setLoggiaName(data.loggiaName);
+
+                        // Save to localStorage
+                        localStorage.setItem('presenze_data', JSON.stringify(data));
+
+                        // Clean URL
+                        window.history.replaceState({}, '', window.location.pathname);
+                    }
+                } else {
+                    // Load from localStorage
+                    const saved = localStorage.getItem('presenze_data');
+                    if (saved) {
+                        try {
+                            const data = JSON.parse(saved);
+                            if (data.date) setDate(data.date);
+                            if (data.members) setMembers(data.members);
+                            if (data.justified) setJustified(data.justified);
+                            if (data.alwaysJustified) setAlwaysJustified(data.alwaysJustified);
+                            if (data.loggiaName) setLoggiaName(data.loggiaName);
+                        } catch (e) {
+                            console.error('Error loading data:', e);
+                        }
+                    }
+                }
+
+                // Show name modal if no name set
+                const savedName = localStorage.getItem('loggia_name');
+                if (savedName) {
+                    setLoggiaName(savedName);
+                } else {
+                    setShowNameModal(true);
+                }
+            }, []);
+
+            // Save to localStorage whenever data changes
+            useEffect(() => {
+                const data = {
+                    date,
+                    members,
+                    justified,
+                    alwaysJustified,
+                    loggiaName,
+                    lastUpdated: new Date().toISOString()
+                };
+                localStorage.setItem('presenze_data', JSON.stringify(data));
+            }, [date, members, justified, alwaysJustified, loggiaName]);
+
+            const generateShareLink = () => {
+                const data = {
+                    date,
+                    members,
+                    justified,
+                    alwaysJustified,
+                    loggiaName
+                };
+                const compressed = compressData(data);
+                const url = `${window.location.origin}${window.location.pathname}?data=${compressed}`;
+                setShareLink(url);
+                setShowShareModal(true);
+            };
+
+            const copyToClipboard = async () => {
+                try {
+                    await navigator.clipboard.writeText(shareLink);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                } catch (err) {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = shareLink;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                }
+            };
+
+            const saveLoggiaName = () => {
+                if (loggiaName.trim()) {
+                    localStorage.setItem('loggia_name', loggiaName.trim());
+                    setShowNameModal(false);
+                }
+            };
+
+            const toggleJustified = (member) => {
+                setJustified(prev => ({
+                    ...prev,
+                    [member]: !prev[member]
+                }));
+            };
+
+            const toggleAlwaysJustified = (member) => {
+                setAlwaysJustified(prev => {
+                    const newState = {
+                        ...prev,
+                        [member]: !prev[member]
+                    };
+
+                    if (newState[member]) {
+                        setJustified(prevJustified => ({
+                            ...prevJustified,
+                            [member]: true
+                        }));
+                    }
+
+                    return newState;
+                });
+            };
+
+            const addMember = () => {
+                if (newMemberName.trim()) {
+                    setMembers(prev => [...prev, newMemberName.trim()].sort());
+                    setNewMemberName('');
+                    setShowAddModal(false);
+                }
+            };
+
+            const deleteMember = (member) => {
+                if (confirm(`Vuoi rimuovere "${member}" dalla lista?`)) {
+                    setMembers(prev => prev.filter(m => m !== member));
+                    setJustified(prev => {
+                        const newState = { ...prev };
+                        delete newState[member];
+                        return newState;
+                    });
+                    setAlwaysJustified(prev => {
+                        const newState = { ...prev };
+                        delete newState[member];
+                        return newState;
+                    });
+                }
+            };
+
+            const resetJustifications = () => {
+                if (confirm('Vuoi azzerare tutte le giustificazioni per questa tornata?')) {
+                    const newJustified = {};
+                    members.forEach(member => {
+                        if (alwaysJustified[member]) {
+                            newJustified[member] = true;
+                        }
+                    });
+                    setJustified(newJustified);
+                }
+            };
+
+            const exportData = () => {
+                const data = {
+                    loggiaName,
+                    date,
+                    members,
+                    justified,
+                    alwaysJustified,
+                    exportDate: new Date().toISOString()
+                };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `presenze-${date}.json`;
+                a.click();
+            };
+
+            const importData = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            if (data.date) setDate(data.date);
+                            if (data.members) setMembers(data.members);
+                            if (data.justified) setJustified(data.justified);
+                            if (data.alwaysJustified) setAlwaysJustified(data.alwaysJustified);
+                            if (data.loggiaName) setLoggiaName(data.loggiaName);
+                            alert('Dati importati con successo!');
+                        } catch (err) {
+                            alert('Errore nell\'importazione del file');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+
+            const filteredMembers = useMemo(() => {
+                return members.filter(member =>
+                    member.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }, [members, searchTerm]);
+
+            const stats = useMemo(() => {
+                const total = members.length;
+                const justifiedCount = Object.values(justified).filter(Boolean).length;
+                const presentCount = total - justifiedCount;
+                return { total, justifiedCount, presentCount };
+            }, [members, justified]);
+
+            const formatDate = (dateStr) => {
+                const date = new Date(dateStr + 'T12:00:00');
+                return new Intl.DateTimeFormat('it-IT', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }).format(date);
+            };
+
+            return (
+                <div className="min-h-screen pb-8">
+                    {/* Share Button */}
+                    <button
+                        onClick={generateShareLink}
+                        className={`share-button ${copySuccess ? 'copy-success' : ''}`}
+                        title="Condividi dati"
+                    >
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"/>
+                        </svg>
+                    </button>
+
+                    {/* Header */}
+                    <div className="logo-container text-white py-8 px-4 mb-8">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="flex items-center justify-center gap-4 mb-4">
+                                <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 2.18l8 3.82v8.75c-.68 4.09-3.88 7.5-8 8.25-4.12-.75-7.32-4.16-8-8.25V7.82l8-3.64zm-1 4.82v2h2V9h-2zm0 3v6h2v-6h-2z"/>
+                                </svg>
+                                <div className="text-center">
+                                    <h1 className="text-4xl md:text-5xl font-bold">Presenze Loggia</h1>
+                                    {loggiaName && (
+                                        <p className="text-white/90 mt-1 cursor-pointer hover:text-white" onClick={() => setShowNameModal(true)}>
+                                            {loggiaName} ✏️
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            <p className="text-center text-white/90 text-lg">Gestione presenze e giustificazioni</p>
+                        </div>
+                    </div>
+
+                    <div className="max-w-4xl mx-auto px-4">
+                        {/* Date and Stats */}
+                        <div className="card-shadow bg-white rounded-2xl p-6 mb-8">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                                <div className="flex-1">
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Data Tornata
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
+                                    />
+                                    <p className="text-sm text-gray-500 mt-2 font-medium">
+                                        {formatDate(date)}
+                                    </p>
+                                </div>
+
+                                <button
+                                    onClick={() => setDate(getNextFriday())}
+                                    className="btn-primary text-white px-6 py-3 rounded-xl font-semibold whitespace-nowrap"
+                                >
+                                    Prossimo Venerdì
+                                </button>
+                            </div>
+
+                            {/* Statistics */}
+                            <div className="flex flex-wrap gap-3 justify-center">
+                                <div className="stats-badge badge-total">
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                                    </svg>
+                                    Totale: {stats.total}
+                                </div>
+                                <div className="stats-badge badge-present">
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                    </svg>
+                                    Presenti: {stats.presentCount}
+                                </div>
+                                <div className="stats-badge badge-justified">
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+                                    </svg>
+                                    Giustificati: {stats.justifiedCount}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-wrap gap-3 mb-6">
+                            <input
+                                type="text"
+                                placeholder="🔍 Cerca fratello..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="flex-1 min-w-[200px] px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            />
+                            <button
+                                onClick={() => setShowAddModal(true)}
+                                className="btn-primary text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd"/>
+                                </svg>
+                                Aggiungi
+                            </button>
+                            <button
+                                onClick={resetJustifications}
+                                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd"/>
+                                </svg>
+                                Reset
+                            </button>
+                            <button
+                                onClick={exportData}
+                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd"/>
+                                </svg>
+                                Esporta
+                            </button>
+                            <label className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 cursor-pointer">
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd"/>
+                                </svg>
+                                Importa
+                                <input type="file" accept=".json" onChange={importData} className="hidden" />
+                            </label>
+                        </div>
+
+                        {/* Members List */}
+                        <div className="space-y-3">
+                            {filteredMembers.map(member => (
+                                <div
+                                    key={member}
+                                    className={`member-card bg-white rounded-xl p-4 card-shadow ${
+                                        justified[member] ? (alwaysJustified[member] ? 'always-justified' : 'justified') : ''
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-semibold text-gray-900 text-lg truncate">
+                                                {member}
+                                            </h3>
+                                            {alwaysJustified[member] && (
+                                                <span className="inline-block mt-1 text-xs font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded-full">
+                                                    Sempre giustificato
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex flex-col items-center gap-1">
+                                                <label className="toggle-switch">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={justified[member] || false}
+                                                        onChange={() => toggleJustified(member)}
+                                                        disabled={alwaysJustified[member]}
+                                                    />
+                                                    <span className="slider"></span>
+                                                </label>
+                                                <span className="text-xs font-medium text-gray-600">
+                                                    {justified[member] ? 'Giustif.' : 'Presente'}
+                                                </span>
+                                            </div>
+
+                                            <button
+                                                onClick={() => toggleAlwaysJustified(member)}
+                                                className={`p-2 rounded-lg transition-colors ${
+                                                    alwaysJustified[member]
+                                                        ? 'bg-blue-100 text-blue-700'
+                                                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                                }`}
+                                                title="Sempre giustificato"
+                                            >
+                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
+                                                </svg>
+                                            </button>
+
+                                            <button
+                                                onClick={() => deleteMember(member)}
+                                                className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                                title="Rimuovi"
+                                            >
+                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {filteredMembers.length === 0 && (
+                            <div className="text-center py-12 bg-white rounded-2xl card-shadow">
+                                <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <p className="text-gray-500 text-lg">Nessun fratello trovato</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Name Modal */}
+                    <div className={`modal ${showNameModal ? 'active' : ''}`} onClick={() => loggiaName && setShowNameModal(false)}>
+                        <div className="modal-content bg-white rounded-2xl p-8 max-w-md w-full mx-4 card-shadow" onClick={(e) => e.stopPropagation()}>
+                            <h2 className="text-2xl font-bold mb-6 text-gray-900">Nome Loggia</h2>
+                            <input
+                                type="text"
+                                value={loggiaName}
+                                onChange={(e) => setLoggiaName(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && saveLoggiaName()}
+                                placeholder="Es: Loggia Cagliari"
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent mb-6"
+                                autoFocus
+                            />
+                            <button
+                                onClick={saveLoggiaName}
+                                className="w-full btn-primary text-white px-6 py-3 rounded-xl font-semibold"
+                            >
+                                Salva
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Add Member Modal */}
+                    <div className={`modal ${showAddModal ? 'active' : ''}`} onClick={() => setShowAddModal(false)}>
+                        <div className="modal-content bg-white rounded-2xl p-8 max-w-md w-full mx-4 card-shadow" onClick={(e) => e.stopPropagation()}>
+                            <h2 className="text-2xl font-bold mb-6 text-gray-900">Aggiungi Fratello</h2>
+                            <input
+                                type="text"
+                                value={newMemberName}
+                                onChange={(e) => setNewMemberName(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && addMember()}
+                                placeholder="Nome e Cognome"
+                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent mb-6"
+                                autoFocus
+                            />
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowAddModal(false)}
+                                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+                                >
+                                    Annulla
+                                </button>
+                                <button
+                                    onClick={addMember}
+                                    className="flex-1 btn-primary text-white px-6 py-3 rounded-xl font-semibold"
+                                >
+                                    Aggiungi
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Share Modal */}
+                    <div className={`modal ${showShareModal ? 'active' : ''}`} onClick={() => setShowShareModal(false)}>
+                        <div className="modal-content bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 card-shadow" onClick={(e) => e.stopPropagation()}>
+                            <h2 className="text-2xl font-bold mb-4 text-gray-900">Condividi Dati</h2>
+                            <p className="text-gray-600 mb-6">
+                                Copia questo link e invialo agli altri. Quando lo apriranno, vedranno gli stessi dati attuali.
+                            </p>
+
+                            <div className="bg-gray-50 rounded-xl p-4 mb-6 break-all text-sm font-mono">
+                                {shareLink}
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowShareModal(false)}
+                                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+                                >
+                                    Chiudi
+                                </button>
+                                <button
+                                    onClick={copyToClipboard}
+                                    className="flex-1 btn-primary text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2"
+                                >
+                                    {copySuccess ? (
+                                        <>
+                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                            </svg>
+                                            Copiato!
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+                                                <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+                                            </svg>
+                                            Copia Link
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+
+                            <div className="mt-6 p-4 bg-blue-50 rounded-xl">
+                                <p className="text-sm text-blue-800">
+                                    <strong>💡 Come funziona:</strong> Il link contiene tutti i dati codificati. Chi lo apre avrà una copia aggiornata. Per sincronizzare di nuovo, genera un nuovo link con i dati più recenti e invialoglielo!
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
